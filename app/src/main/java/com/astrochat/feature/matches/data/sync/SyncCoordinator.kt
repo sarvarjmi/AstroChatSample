@@ -1,6 +1,9 @@
 package com.astrochat.feature.matches.data.sync
 
+import android.util.Log
+import com.astrochat.core.common.AppError
 import com.astrochat.core.common.di.IoDispatcher
+import com.astrochat.core.common.toAppError
 import com.astrochat.core.database.dao.SyncOperationDao
 import com.astrochat.core.network.ConnectivityObserver
 import com.astrochat.feature.matches.data.local.MatchLocalDataSource
@@ -44,9 +47,10 @@ class SyncCoordinator @Inject constructor(
     suspend fun syncPendingOperations() {
         val pending = syncOperationDao.getPendingOperations().first()
         pending.forEach { operation ->
-            // Retry policy implementation:
-            // If it failed too many times, we mark it as SYNC_FAILED.
+            Log.d("SyncCoordinator", "Syncing profile: ${operation.profileId}, attempt: ${operation.attemptCount}")
+
             if (operation.attemptCount > 3) {
+                Log.e("SyncCoordinator", "Max retries reached for profile: ${operation.profileId}")
                 localDataSource.updateMatchDecision(
                     profileId = operation.profileId,
                     decision = operation.decision,
@@ -56,26 +60,33 @@ class SyncCoordinator @Inject constructor(
             }
 
             try {
-                // Simulate exponential backoff
                 if (operation.attemptCount > 0) {
                     delay((1 shl (operation.attemptCount - 1)).seconds)
                 }
 
                 syncOperationDao.incrementAttemptCount(operation.operationId)
 
-                // IMPORTANT: The supplied Random User API is read-only and does not
-                // provide an endpoint for Accept/Decline mutations.
-                // In a real application, the network call to the backend would happen here:
-                // val result = api.updateMatchDecision(operation.profileId, operation.decision)
+                // IMPORTANT: The supplied Random User API is read-only.
+                // We simulate server synchronization here.
 
-                // For this assignment, we simulate a successful server-side synchronization:
                 localDataSource.updateMatchDecision(
                     profileId = operation.profileId,
                     decision = operation.decision,
                     syncStatus = SyncStatus.SYNCED
                 )
+                Log.i("SyncCoordinator", "Successfully synced profile: ${operation.profileId}")
             } catch (e: Exception) {
-                // Keep as PENDING_SYNC for the next trigger
+                val appError = e.toAppError()
+                Log.w("SyncCoordinator", "Sync failed for profile: ${operation.profileId}. Error: ${appError.getUserFriendlyMessage()}")
+                if (appError is AppError.Network.Server || appError is AppError.Unknown) {
+                    // Retry on next connectivity change
+                } else {
+                    localDataSource.updateMatchDecision(
+                        profileId = operation.profileId,
+                        decision = operation.decision,
+                        syncStatus = SyncStatus.SYNC_FAILED
+                    )
+                }
             }
         }
     }

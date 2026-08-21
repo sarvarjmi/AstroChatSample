@@ -1,5 +1,8 @@
 package com.astrochat.feature.matches.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.astrochat.core.common.AppError
 import com.astrochat.core.network.ConnectivityObserver
 import com.astrochat.feature.matches.presentation.components.MatchCard
 
@@ -36,6 +40,16 @@ fun MatchListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val matches = viewModel.matches.collectAsLazyPagingItems()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(matches.loadState.refresh) {
+        val loadState = matches.loadState.refresh
+        if (loadState is LoadState.Error && matches.itemCount > 0) {
+            val error = loadState.error as? AppError
+            snackbarHostState.showSnackbar(
+                message = error?.getUserFriendlyMessage() ?: "Failed to refresh matches."
+            )
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
@@ -65,7 +79,11 @@ fun MatchListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            if (uiState.connectivityStatus != ConnectivityObserver.Status.Available) {
+            AnimatedVisibility(
+                visible = uiState.connectivityStatus != ConnectivityObserver.Status.Available,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
                 ConnectivityBanner(status = uiState.connectivityStatus)
             }
 
@@ -97,9 +115,10 @@ fun MatchListScreen(
                             }
                         }
                         is LoadState.Error -> {
+                            val error = loadState.error as? AppError
                             item {
                                 ErrorItem(
-                                    message = "Failed to load more profiles",
+                                    message = error?.getUserFriendlyMessage() ?: "Failed to load more profiles",
                                     onRetry = { matches.retry() }
                                 )
                             }
@@ -115,8 +134,9 @@ fun MatchListScreen(
                 }
 
                 if (matches.loadState.refresh is LoadState.Error && matches.itemCount == 0) {
+                    val error = (matches.loadState.refresh as LoadState.Error).error as? AppError
                     ErrorView(
-                        message = "Could not fetch matches. Please check your connection.",
+                        message = error?.getUserFriendlyMessage() ?: "Could not fetch matches.",
                         onRetry = { matches.retry() }
                     )
                 }
@@ -134,7 +154,7 @@ fun ConnectivityBanner(status: ConnectivityObserver.Status) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(if (status == ConnectivityObserver.Status.Unavailable) Color.Red else Color.Gray)
+            .background(if (status == ConnectivityObserver.Status.Unavailable || status == ConnectivityObserver.Status.Lost) Color.Red else Color.Gray)
             .padding(4.dp),
         contentAlignment = Alignment.Center
     ) {

@@ -1,9 +1,9 @@
 package com.astrochat.feature.matches.data.repository
 
 import androidx.paging.*
-import com.astrochat.core.common.AppError
 import com.astrochat.core.common.DataResult
 import com.astrochat.core.common.di.IoDispatcher
+import com.astrochat.core.common.toAppError
 import com.astrochat.feature.matches.data.local.MatchLocalDataSource
 import com.astrochat.feature.matches.data.mapper.toDomain
 import com.astrochat.feature.matches.data.remote.MatchRemoteMediator
@@ -44,7 +44,7 @@ class MatchRepositoryImpl @Inject constructor(
             localDataSource.updateMatchDecision(profileId, decision, SyncStatus.PENDING_SYNC)
             DataResult.Success(Unit)
         } catch (e: Exception) {
-            DataResult.Error(AppError.Unknown)
+            DataResult.Error(e.toAppError())
         }
     }
 }

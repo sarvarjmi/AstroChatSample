@@ -62,8 +62,8 @@ class MatchListViewModel @Inject constructor(
     private fun updateDecision(profileId: String, decision: MatchDecision) {
         viewModelScope.launch {
             repository.updateMatchDecision(profileId, decision)
-                .onError {
-                    _uiEffect.emit(MatchListUiEffect.ShowMessage("Failed to update decision locally"))
+                .onError { error ->
+                    _uiEffect.emit(MatchListUiEffect.ShowMessage(error.getUserFriendlyMessage()))
                 }
         }
     }

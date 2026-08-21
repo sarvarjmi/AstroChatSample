@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AstroChatSample"
+rootProject.name = "MatchMate"
 include(":app")

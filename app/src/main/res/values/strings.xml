@@ -1,3 +1,15 @@
 <resources>
-    <string name="app_name">AstroChatSample</string>
+    <string name="app_name">MatchMate</string>
+    <string name="title_matches">MatchMate</string>
+    <string name="action_accept">Accept</string>
+    <string name="action_decline">Decline</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="status_offline">Offline Mode - %1$s</string>
+    <string name="status_syncing">Syncing decision...</string>
+    <string name="error_fetch_matches">Could not fetch matches.</string>
+    <string name="error_load_more">Failed to load more profiles</string>
+    <string name="empty_profiles">No profiles found.</string>
+    <string name="desc_profile_image">Profile image of %1$s</string>
+    <string name="desc_match_card">Match card for %1$s %2$s, age %3$d, from %4$s</string>
 </resources>

@@ -3,6 +3,7 @@ package com.astrochat.feature.matches.data.sync
 import android.util.Log
 import com.astrochat.core.common.AppError
 import com.astrochat.core.common.di.IoDispatcher
+import com.astrochat.core.common.di.ApplicationScope
 import com.astrochat.core.common.toAppError
 import com.astrochat.core.database.dao.SyncOperationDao
 import com.astrochat.core.network.ConnectivityObserver
@@ -10,7 +11,6 @@ import com.astrochat.feature.matches.data.local.MatchLocalDataSource
 import com.astrochat.feature.matches.domain.model.SyncStatus
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -25,9 +25,9 @@ class SyncCoordinator @Inject constructor(
     private val syncOperationDao: SyncOperationDao,
     private val localDataSource: MatchLocalDataSource,
     private val connectivityObserver: ConnectivityObserver,
-    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
+    @ApplicationScope private val scope: CoroutineScope
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
 
     fun initialize() {
         scope.launch {

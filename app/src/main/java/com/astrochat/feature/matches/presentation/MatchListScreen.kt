@@ -13,16 +13,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.astrochat.R
 import com.astrochat.core.common.AppError
 import com.astrochat.core.network.ConnectivityObserver
+import com.astrochat.feature.matches.domain.model.MatchProfile
 import com.astrochat.feature.matches.presentation.components.MatchCard
 
 @Composable
@@ -41,6 +45,139 @@ fun MatchListScreen(
     val matches = viewModel.matches.collectAsLazyPagingItems()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    HandleRefreshError(matches, snackbarHostState)
+    HandleUiEffects(viewModel.uiEffect, snackbarHostState)
+
+    Scaffold(
+        topBar = {
+            MatchListTopBar(onRefresh = { matches.refresh() })
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Column(modifier = Modifier.padding(padding)) {
+            ConnectivityBannerVisibility(uiState.connectivityStatus)
+
+            MatchListContent(
+                matches = matches,
+                onAccept = { id -> viewModel.onEvent(MatchListUiEvent.AcceptMatch(id)) },
+                onDecline = { id -> viewModel.onEvent(MatchListUiEvent.DeclineMatch(id)) }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MatchListTopBar(onRefresh: () -> Unit) {
+    TopAppBar(
+        title = { Text(stringResource(R.string.title_matches)) },
+        actions = {
+            IconButton(onClick = onRefresh) {
+                Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.action_refresh))
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    )
+}
+
+@Composable
+private fun ConnectivityBannerVisibility(status: ConnectivityObserver.Status) {
+    AnimatedVisibility(
+        visible = status != ConnectivityObserver.Status.Available,
+        enter = expandVertically(),
+        exit = shrinkVertically()
+    ) {
+        ConnectivityBanner(status = status)
+    }
+}
+
+@Composable
+private fun MatchListContent(
+    matches: LazyPagingItems<MatchProfile>,
+    onAccept: (String) -> Unit,
+    onDecline: (String) -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(8.dp)
+        ) {
+            items(
+                count = matches.itemCount,
+                key = matches.itemKey { it.id }
+            ) { index ->
+                val profile = matches[index]
+                if (profile != null) {
+                    MatchCard(
+                        profile = profile,
+                        onAccept = { onAccept(profile.id) },
+                        onDecline = { onDecline(profile.id) }
+                    )
+                }
+            }
+
+            item {
+                AppendLoadStateItem(matches.loadState.append) { matches.retry() }
+            }
+        }
+
+        RefreshLoadStateOverlay(matches)
+    }
+}
+
+@Composable
+private fun AppendLoadStateItem(
+    loadState: LoadState,
+    onRetry: () -> Unit
+) {
+    when (loadState) {
+        is LoadState.Loading -> {
+            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        is LoadState.Error -> {
+            val error = loadState.error as? AppError
+            ErrorItem(
+                message = error?.getUserFriendlyMessage() ?: stringResource(R.string.error_load_more),
+                onRetry = onRetry
+            )
+        }
+        else -> {}
+    }
+}
+
+@Composable
+private fun RefreshLoadStateOverlay(matches: LazyPagingItems<MatchProfile>) {
+    val refreshState = matches.loadState.refresh
+
+    if (refreshState is LoadState.Loading) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    }
+
+    if (refreshState is LoadState.Error && matches.itemCount == 0) {
+        val error = refreshState.error as? AppError
+        ErrorView(
+            message = error?.getUserFriendlyMessage() ?: stringResource(R.string.error_fetch_matches),
+            onRetry = { matches.retry() }
+        )
+    }
+
+    if (refreshState is LoadState.NotLoading && matches.itemCount == 0) {
+        EmptyView()
+    }
+}
+
+@Composable
+private fun HandleRefreshError(
+    matches: LazyPagingItems<MatchProfile>,
+    snackbarHostState: SnackbarHostState
+) {
     LaunchedEffect(matches.loadState.refresh) {
         val loadState = matches.loadState.refresh
         if (loadState is LoadState.Error && matches.itemCount > 0) {
@@ -50,99 +187,18 @@ fun MatchListScreen(
             )
         }
     }
+}
 
+@Composable
+private fun HandleUiEffects(
+    uiEffect: kotlinx.coroutines.flow.SharedFlow<MatchListUiEffect>,
+    snackbarHostState: SnackbarHostState
+) {
     LaunchedEffect(Unit) {
-        viewModel.uiEffect.collect { effect ->
+        uiEffect.collect { effect ->
             when (effect) {
                 is MatchListUiEffect.ShowMessage -> {
                     snackbarHostState.showSnackbar(effect.message)
-                }
-            }
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("MatchMate") },
-                actions = {
-                    IconButton(onClick = { matches.refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            AnimatedVisibility(
-                visible = uiState.connectivityStatus != ConnectivityObserver.Status.Available,
-                enter = expandVertically(),
-                exit = shrinkVertically()
-            ) {
-                ConnectivityBanner(status = uiState.connectivityStatus)
-            }
-
-            Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(8.dp)
-                ) {
-                    items(
-                        count = matches.itemCount,
-                        key = matches.itemKey { it.id }
-                    ) { index ->
-                        val profile = matches[index]
-                        if (profile != null) {
-                            MatchCard(
-                                profile = profile,
-                                onAccept = { viewModel.onEvent(MatchListUiEvent.AcceptMatch(profile.id)) },
-                                onDecline = { viewModel.onEvent(MatchListUiEvent.DeclineMatch(profile.id)) }
-                            )
-                        }
-                    }
-
-                    when (val loadState = matches.loadState.append) {
-                        is LoadState.Loading -> {
-                            item {
-                                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator()
-                                }
-                            }
-                        }
-                        is LoadState.Error -> {
-                            val error = loadState.error as? AppError
-                            item {
-                                ErrorItem(
-                                    message = error?.getUserFriendlyMessage() ?: "Failed to load more profiles",
-                                    onRetry = { matches.retry() }
-                                )
-                            }
-                        }
-                        else -> {}
-                    }
-                }
-
-                if (matches.loadState.refresh is LoadState.Loading) {
-                    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-
-                if (matches.loadState.refresh is LoadState.Error && matches.itemCount == 0) {
-                    val error = (matches.loadState.refresh as LoadState.Error).error as? AppError
-                    ErrorView(
-                        message = error?.getUserFriendlyMessage() ?: "Could not fetch matches.",
-                        onRetry = { matches.retry() }
-                    )
-                }
-
-                if (matches.loadState.refresh is LoadState.NotLoading && matches.itemCount == 0) {
-                    EmptyView()
                 }
             }
         }
@@ -159,7 +215,7 @@ fun ConnectivityBanner(status: ConnectivityObserver.Status) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = "Offline Mode - $status",
+            text = stringResource(R.string.status_offline, status.name),
             color = Color.White,
             style = MaterialTheme.typography.labelSmall
         )
@@ -174,7 +230,7 @@ fun ErrorItem(message: String, onRetry: () -> Unit) {
     ) {
         Text(text = message, color = MaterialTheme.colorScheme.error)
         Button(onClick = onRetry) {
-            Text("Retry")
+            Text(stringResource(R.string.action_retry))
         }
     }
 }
@@ -185,7 +241,7 @@ fun ErrorView(message: String, onRetry: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = message, textAlign = TextAlign.Center, modifier = Modifier.padding(16.dp))
             Button(onClick = onRetry) {
-                Text("Retry")
+                Text(stringResource(R.string.action_retry))
             }
         }
     }
@@ -194,7 +250,7 @@ fun ErrorView(message: String, onRetry: () -> Unit) {
 @Composable
 fun EmptyView() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "No profiles found.")
+        Text(text = stringResource(R.string.empty_profiles))
     }
 }
 

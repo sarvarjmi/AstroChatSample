@@ -51,7 +51,7 @@ class MatchDaoTest {
             pageIndex = 1
         )
 
-        matchDao.insertMatches(listOf(match))
+        matchDao.upsertMatchesPreservingDecisions(listOf(match))
         val matches = matchDao.getMatches().first()
 
         assertEquals(1, matches.size)
@@ -59,8 +59,8 @@ class MatchDaoTest {
     }
 
     @Test
-    fun updateDecision() = runBlocking {
-        val match = MatchEntity(
+    fun upsertPreservesExistingDecision() = runBlocking {
+        val initialMatch = MatchEntity(
             id = "1",
             firstName = "John",
             lastName = "Doe",
@@ -69,16 +69,30 @@ class MatchDaoTest {
             state = "NY",
             country = "USA",
             imageUrl = "url",
-            decision = MatchDecision.PENDING,
+            decision = MatchDecision.ACCEPTED, // User already accepted
+            syncStatus = SyncStatus.SYNCED,
+            pageIndex = 1
+        )
+        matchDao.upsertMatchesPreservingDecisions(listOf(initialMatch))
+
+        val refreshedMatch = MatchEntity(
+            id = "1",
+            firstName = "John",
+            lastName = "Doe",
+            age = 30,
+            city = "NY",
+            state = "NY",
+            country = "USA",
+            imageUrl = "url",
+            decision = MatchDecision.PENDING, // Remote says pending
             syncStatus = SyncStatus.SYNCED,
             pageIndex = 1
         )
 
-        matchDao.insertMatches(listOf(match))
-        matchDao.updateDecision("1", MatchDecision.ACCEPTED, SyncStatus.PENDING_SYNC)
+        matchDao.upsertMatchesPreservingDecisions(listOf(refreshedMatch))
 
-        val updatedMatch = matchDao.getMatches().first()[0]
-        assertEquals(MatchDecision.ACCEPTED, updatedMatch.decision)
-        assertEquals(SyncStatus.PENDING_SYNC, updatedMatch.syncStatus)
+        val finalMatch = matchDao.getMatches().first()[0]
+        // Should STILL be ACCEPTED
+        assertEquals(MatchDecision.ACCEPTED, finalMatch.decision)
     }
 }

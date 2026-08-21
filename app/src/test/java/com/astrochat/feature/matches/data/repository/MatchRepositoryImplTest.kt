@@ -54,4 +54,14 @@ class MatchRepositoryImplTest {
 
         assertTrue(result is DataResult.Success)
     }
+
+    @Test
+    fun `updateMatchDecision returns error when local update fails`() = runTest {
+        coEvery { localDataSource.updateMatchDecision(any(), any(), any()) } throws Exception("DB error")
+
+        val result = repository.updateMatchDecision("1", MatchDecision.ACCEPTED)
+
+        assertTrue(result is DataResult.Error)
+        assertTrue((result as DataResult.Error).error is AppError.Unknown)
+    }
 }

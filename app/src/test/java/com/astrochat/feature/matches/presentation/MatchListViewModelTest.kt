@@ -1,5 +1,6 @@
 package com.astrochat.feature.matches.presentation
 
+import app.cash.turbine.test
 import androidx.paging.PagingData
 import com.astrochat.core.common.DataResult
 import com.astrochat.core.network.ConnectivityObserver
@@ -16,6 +17,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -65,5 +67,17 @@ class MatchListViewModelTest {
     fun `connectivity changes update uiState`() = runTest {
         connectivityFlow.emit(ConnectivityObserver.Status.Lost)
         assertEquals(ConnectivityObserver.Status.Lost, viewModel.uiState.value.connectivityStatus)
+    }
+
+    @Test
+    fun `updateMatchDecision error triggers ShowMessage effect`() = runTest {
+        coEvery { repository.updateMatchDecision(any(), any()) } returns DataResult.Error(com.astrochat.core.common.AppError.Unknown)
+
+        viewModel.uiEffect.test {
+            viewModel.onEvent(MatchListUiEvent.AcceptMatch("1"))
+            val effect = awaitItem()
+            assertTrue(effect is MatchListUiEffect.ShowMessage)
+            assertEquals("An unexpected error occurred.", (effect as MatchListUiEffect.ShowMessage).message)
+        }
     }
 }

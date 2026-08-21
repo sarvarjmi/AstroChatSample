@@ -1,6 +1,6 @@
 package com.astrochat.core.common
 
-sealed class AppError {
+sealed class AppError : Exception() {
     sealed class Network : AppError() {
         object NoConnection : Network()
         object Timeout : Network()

@@ -1,5 +1,6 @@
 package com.astrochat.core.database.dao
 
+import androidx.paging.PagingSource
 import androidx.room.*
 import com.astrochat.core.database.entity.MatchEntity
 import com.astrochat.feature.matches.domain.model.MatchDecision
@@ -10,6 +11,9 @@ import kotlinx.coroutines.flow.Flow
 interface MatchDao {
     @Query("SELECT * FROM matches ORDER BY pageIndex ASC, createdAt ASC")
     fun getMatches(): Flow<List<MatchEntity>>
+
+    @Query("SELECT * FROM matches ORDER BY pageIndex ASC, createdAt ASC")
+    fun getPagingSource(): PagingSource<Int, MatchEntity>
 
     @Query("SELECT * FROM matches WHERE id = :id")
     suspend fun getMatchById(id: String): MatchEntity?

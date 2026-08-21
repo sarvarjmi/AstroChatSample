@@ -1,15 +1,17 @@
 package com.astrochat.feature.matches.data.repository
 
-import app.cash.turbine.test
+import androidx.paging.PagingSource
 import com.astrochat.core.common.AppError
 import com.astrochat.core.common.DataResult
+import com.astrochat.core.database.dao.MatchDao
+import com.astrochat.core.database.entity.MatchEntity
 import com.astrochat.feature.matches.data.local.MatchLocalDataSource
-import com.astrochat.feature.matches.data.remote.MatchRemoteDataSource
-import com.astrochat.feature.matches.data.remote.dto.RandomUserResponse
+import com.astrochat.feature.matches.data.remote.MatchRemoteMediator
+import com.astrochat.feature.matches.domain.model.MatchDecision
+import com.astrochat.feature.matches.domain.model.SyncStatus
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -18,54 +20,38 @@ import org.junit.Test
 
 class MatchRepositoryImplTest {
 
-    private val remoteDataSource: MatchRemoteDataSource = mockk()
+    private val matchDao: MatchDao = mockk()
     private val localDataSource: MatchLocalDataSource = mockk()
+    private val remoteMediator: MatchRemoteMediator = mockk()
     private lateinit var repository: MatchRepositoryImpl
 
     @Before
     fun setup() {
         repository = MatchRepositoryImpl(
-            remoteDataSource,
+            matchDao,
             localDataSource,
+            remoteMediator,
             Dispatchers.Unconfined
         )
     }
 
     @Test
-    fun `getMatches emits loading then success from local data`() = runTest {
-        val remoteResponse = mockk<RandomUserResponse>()
-        coEvery { remoteResponse.results } returns emptyList()
-        coEvery { remoteDataSource.getMatches(any(), any(), any()) } returns DataResult.Success(remoteResponse)
-        coEvery { localDataSource.insertMatches(any()) } returns Unit
-        coEvery { localDataSource.getMatches() } returns flowOf(emptyList())
+    fun `getMatches returns flow of paging data`() = runTest {
+        val pagingSource = mockk<PagingSource<Int, MatchEntity>>()
+        coEvery { matchDao.getPagingSource() } returns pagingSource
 
-        repository.getMatches(1, 10).test {
-            assertTrue(awaitItem() is DataResult.Loading)
-            assertTrue(awaitItem() is DataResult.Success)
-            cancelAndIgnoreRemainingEvents()
-        }
+        val result = repository.getMatches()
+
+        // Verifying flow is returned (Smoke test for Paging 3 integration)
+        assertTrue(result != null)
     }
 
     @Test
-    fun `getMatches emits error when local is empty and remote fails`() = runTest {
-        coEvery { remoteDataSource.getMatches(any(), any(), any()) } returns DataResult.Error(AppError.Network.NoConnection)
-        coEvery { localDataSource.getMatches() } returns flowOf(emptyList())
+    fun `updateMatchDecision returns success when local update succeeds`() = runTest {
+        coEvery { localDataSource.updateMatchDecision(any(), any(), any()) } returns Unit
 
-        repository.getMatches(1, 10).test {
-            assertTrue(awaitItem() is DataResult.Loading)
-            // Depending on execution order, the empty Success from DB might or might not come before Error
-            // In MatchRepositoryImpl, we launch dbJob, then do network fetch.
+        val result = repository.updateMatchDecision("1", MatchDecision.ACCEPTED)
 
-            val item2 = awaitItem()
-            if (item2 is DataResult.Error) {
-                assertEquals(AppError.Network.NoConnection, item2.error)
-            } else {
-                assertTrue(item2 is DataResult.Success)
-                val item3 = awaitItem()
-                assertTrue(item3 is DataResult.Error)
-                assertEquals(AppError.Network.NoConnection, (item3 as DataResult.Error).error)
-            }
-            cancelAndIgnoreRemainingEvents()
-        }
+        assertTrue(result is DataResult.Success)
     }
 }

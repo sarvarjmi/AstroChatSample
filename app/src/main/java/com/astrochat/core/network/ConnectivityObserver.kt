@@ -53,6 +53,12 @@ class NetworkConnectivityObserver @Inject constructor(
                 }
             }
 
+            // Send initial state
+            val activeNetwork = connectivityManager.activeNetwork
+            val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+            val isOnline = capabilities?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+            trySend(if (isOnline) ConnectivityObserver.Status.Available else ConnectivityObserver.Status.Unavailable)
+
             connectivityManager.registerDefaultNetworkCallback(callback)
             awaitClose {
                 connectivityManager.unregisterNetworkCallback(callback)

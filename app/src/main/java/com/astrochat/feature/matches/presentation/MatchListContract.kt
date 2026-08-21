@@ -4,7 +4,8 @@ import com.astrochat.core.network.ConnectivityObserver
 import com.astrochat.feature.matches.domain.model.MatchDecision
 
 data class MatchListUiState(
-    val connectivityStatus: ConnectivityObserver.Status = ConnectivityObserver.Status.Unavailable
+    val connectivityStatus: ConnectivityObserver.Status = ConnectivityObserver.Status.Available,
+    val isDarkMode: Boolean = true
 )
 
 sealed class MatchListUiEvent {
@@ -13,6 +14,7 @@ sealed class MatchListUiEvent {
     data class AcceptMatch(val profileId: String) : MatchListUiEvent()
     data class DeclineMatch(val profileId: String) : MatchListUiEvent()
     object DismissMessage : MatchListUiEvent()
+    object ToggleTheme : MatchListUiEvent()
 }
 
 sealed class MatchListUiEffect {

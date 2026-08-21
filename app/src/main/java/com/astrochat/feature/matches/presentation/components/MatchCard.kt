@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -61,14 +60,17 @@ fun MatchCard(
                 if (profile.decision != MatchDecision.PENDING) {
                     Surface(
                         modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-                        color = if (profile.decision == MatchDecision.ACCEPTED) Color.Green.copy(alpha = 0.8f) else Color.Red.copy(alpha = 0.8f),
+                        color = if (profile.decision == MatchDecision.ACCEPTED)
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                        else
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
                         shape = MaterialTheme.shapes.medium
                     ) {
                         Text(
                             text = profile.decision.name,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
@@ -94,7 +96,9 @@ fun MatchCard(
                 ) {
                     OutlinedButton(
                         onClick = onDecline,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
                         enabled = profile.decision == MatchDecision.PENDING
                     ) {
                         Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_decline))
@@ -104,7 +108,10 @@ fun MatchCard(
 
                     Button(
                         onClick = onAccept,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Green, contentColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
                         enabled = profile.decision == MatchDecision.PENDING
                     ) {
                         Icon(Icons.Default.Check, contentDescription = stringResource(R.string.action_accept))

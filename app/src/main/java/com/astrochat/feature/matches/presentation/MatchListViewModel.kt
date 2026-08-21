@@ -56,6 +56,9 @@ class MatchListViewModel @Inject constructor(
             is MatchListUiEvent.DismissMessage -> {
                 // Optional: handle message dismissal state if needed
             }
+            is MatchListUiEvent.ToggleTheme -> {
+                _uiState.update { it.copy(isDarkMode = !it.isDarkMode) }
+            }
         }
     }
 

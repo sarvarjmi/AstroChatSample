@@ -71,6 +71,13 @@ class MatchListViewModelTest {
     }
 
     @Test
+    fun `ToggleTheme event updates isDarkMode state`() = runTest {
+        val initialTheme = viewModel.uiState.value.isDarkMode
+        viewModel.onEvent(MatchListUiEvent.ToggleTheme)
+        assertEquals(!initialTheme, viewModel.uiState.value.isDarkMode)
+    }
+
+    @Test
     fun `updateMatchDecision error triggers ShowMessage effect`() = runTest {
         coEvery { repository.updateMatchDecision(any(), any()) } returns DataResult.Error(AppError.Unknown)
 

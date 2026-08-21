@@ -14,10 +14,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
 @Singleton
@@ -36,11 +38,12 @@ class SyncCoordinator @Inject constructor(
                 syncOperationDao.getPendingOperations()
             ) { status, operations ->
                 status == ConnectivityObserver.Status.Available && operations.isNotEmpty()
-            }.collectLatest { shouldSync ->
-                if (shouldSync) {
-                     syncPendingOperations()
+            }.distinctUntilChanged()
+                .collectLatest { shouldSync ->
+                    if (shouldSync) {
+                        syncPendingOperations()
+                    }
                 }
-            }
         }
     }
 
@@ -76,8 +79,9 @@ class SyncCoordinator @Inject constructor(
                 )
                 Log.i("SyncCoordinator", "Successfully synced profile: ${operation.profileId}")
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 val appError = e.toAppError()
-                Log.w("SyncCoordinator", "Sync failed for profile: ${operation.profileId}. Error: ${appError.getUserFriendlyMessage()}")
+                Log.w("SyncCoordinator", "Sync failed for profile: ${operation.profileId}. Error: ${appError.getUserFriendlyMessage()}", e)
                 if (appError is AppError.Network.Server || appError is AppError.Unknown) {
                     // Retry on next connectivity change
                 } else {

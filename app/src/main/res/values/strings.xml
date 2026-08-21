@@ -8,6 +8,7 @@
     <string name="status_offline">Offline Mode - %1$s</string>
     <string name="status_syncing">Syncing decision...</string>
     <string name="error_fetch_matches">Could not fetch matches.</string>
+    <string name="error_refresh_matches">Failed to refresh matches.</string>
     <string name="error_load_more">Failed to load more profiles</string>
     <string name="empty_profiles">No profiles found.</string>
     <string name="desc_profile_image">Profile image of %1$s</string>

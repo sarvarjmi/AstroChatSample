@@ -28,6 +28,7 @@ import com.astrochat.core.common.AppError
 import com.astrochat.core.network.ConnectivityObserver
 import com.astrochat.feature.matches.domain.model.MatchProfile
 import com.astrochat.feature.matches.presentation.components.MatchCard
+import com.astrochat.ui.theme.MatchMateTheme
 
 @Composable
 fun MatchesRoute(
@@ -178,12 +179,13 @@ private fun HandleRefreshError(
     matches: LazyPagingItems<MatchProfile>,
     snackbarHostState: SnackbarHostState
 ) {
+    val errorMessage = stringResource(R.string.error_refresh_matches)
     LaunchedEffect(matches.loadState.refresh) {
         val loadState = matches.loadState.refresh
         if (loadState is LoadState.Error && matches.itemCount > 0) {
             val error = loadState.error as? AppError
             snackbarHostState.showSnackbar(
-                message = error?.getUserFriendlyMessage() ?: "Failed to refresh matches."
+                message = error?.getUserFriendlyMessage() ?: errorMessage
             )
         }
     }
@@ -257,17 +259,23 @@ fun EmptyView() {
 @Preview(showBackground = true)
 @Composable
 fun ConnectivityBannerPreview() {
-    ConnectivityBanner(status = ConnectivityObserver.Status.Unavailable)
+    MatchMateTheme {
+        ConnectivityBanner(status = ConnectivityObserver.Status.Unavailable)
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun ErrorViewPreview() {
-    ErrorView(message = "Sample error message", onRetry = {})
+    MatchMateTheme {
+        ErrorView(message = "Sample error message", onRetry = {})
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun EmptyViewPreview() {
-    EmptyView()
+    MatchMateTheme {
+        EmptyView()
+    }
 }

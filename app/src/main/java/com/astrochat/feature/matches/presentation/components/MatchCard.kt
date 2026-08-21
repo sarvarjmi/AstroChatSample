@@ -22,7 +22,7 @@ import com.astrochat.R
 import com.astrochat.feature.matches.domain.model.MatchDecision
 import com.astrochat.feature.matches.domain.model.MatchProfile
 import com.astrochat.feature.matches.domain.model.SyncStatus
-import com.astrochat.ui.theme.AstroChatSampleTheme
+import com.astrochat.ui.theme.MatchMateTheme
 
 @Composable
 fun MatchCard(
@@ -129,7 +129,7 @@ fun MatchCard(
 @Preview(showBackground = true)
 @Composable
 fun MatchCardPendingPreview() {
-    AstroChatSampleTheme {
+    MatchMateTheme {
         MatchCard(
             profile = MatchProfile(
                 id = "1",
@@ -152,7 +152,7 @@ fun MatchCardPendingPreview() {
 @Preview(showBackground = true)
 @Composable
 fun MatchCardAcceptedPreview() {
-    AstroChatSampleTheme {
+    MatchMateTheme {
         MatchCard(
             profile = MatchProfile(
                 id = "2",
@@ -175,7 +175,7 @@ fun MatchCardAcceptedPreview() {
 @Preview(showBackground = true)
 @Composable
 fun MatchCardSyncingPreview() {
-    AstroChatSampleTheme {
+    MatchMateTheme {
         MatchCard(
             profile = MatchProfile(
                 id = "3",

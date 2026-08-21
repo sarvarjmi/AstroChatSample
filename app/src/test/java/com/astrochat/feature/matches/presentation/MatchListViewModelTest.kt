@@ -2,6 +2,7 @@ package com.astrochat.feature.matches.presentation
 
 import app.cash.turbine.test
 import androidx.paging.PagingData
+import com.astrochat.core.common.AppError
 import com.astrochat.core.common.DataResult
 import com.astrochat.core.network.ConnectivityObserver
 import com.astrochat.feature.matches.domain.model.MatchDecision
@@ -71,13 +72,13 @@ class MatchListViewModelTest {
 
     @Test
     fun `updateMatchDecision error triggers ShowMessage effect`() = runTest {
-        coEvery { repository.updateMatchDecision(any(), any()) } returns DataResult.Error(com.astrochat.core.common.AppError.Unknown)
+        coEvery { repository.updateMatchDecision(any(), any()) } returns DataResult.Error(AppError.Unknown)
 
         viewModel.uiEffect.test {
             viewModel.onEvent(MatchListUiEvent.AcceptMatch("1"))
             val effect = awaitItem()
             assertTrue(effect is MatchListUiEffect.ShowMessage)
-            assertEquals("An unexpected error occurred.", (effect as MatchListUiEffect.ShowMessage).message)
+            assertEquals(AppError.Unknown.getUserFriendlyMessage(), (effect as MatchListUiEffect.ShowMessage).message)
         }
     }
 }

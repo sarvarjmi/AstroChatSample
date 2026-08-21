@@ -37,7 +37,7 @@ sealed class AppError : Exception() {
             is Data.Serialization -> "Data processing error (Serialization)."
             is Data.InvalidResponse -> "Received invalid response from server."
             is Sync.TemporaryFailure -> "Sync failed temporarily. Will retry soon."
-            is Sync.PermanentFailure -> "Sync failed permanently."
+            is Sync.PermanentFailure -> "Sync failed permanently after multiple attempts."
             is NotFound -> "The requested information was not found."
             else -> "An unexpected error occurred."
         }
